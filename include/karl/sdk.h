@@ -25,6 +25,10 @@ namespace osgText
 }
 
 #define KARL_SDK_ABI 1
+// This header's release. The minor number grows with what the tables gain
+// (1.1: Surface::tick and Surface::clock, Live transport events); a KARL
+// older than a field leaves it unused, which the size checks make safe.
+#define KARL_SDK_VERSION "1.1.0"
 
 #if defined(_WIN32)
 #define KARL_PLUGIN_EXPORT extern "C" __declspec(dllexport)

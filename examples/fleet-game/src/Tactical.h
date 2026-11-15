@@ -15,7 +15,7 @@ namespace fleet
 
     /**
      * A sonar plot laid over the sea. The flex PCB's copper shows through the
-     * display as dark lines (TracesData.h); this reads them as the plot's
+     * display as dark lines (karl/traces.h); this reads them as the plot's
      * sector boundaries: small marks where they cross, a coordinate in each
      * cell, and a flash when a ship sails into one. Ships get sonar rings
      * when first detected, when they are dangerous, and in fog.

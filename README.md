@@ -1,18 +1,21 @@
 # KARL plugin SDK
 
-Write C++ / OpenSceneGraph code that KARL loads at startup: a plugin can draw
-anything on its part of the display and own any key or knob.
+Write C++ / OpenGL / OpenSceneGraph code that KARL loads at startup: a plugin
+can draw anything on the whole display or part of it, and own any key or knob.
 
 The contract is one header, [`include/karl/sdk.h`](include/karl/sdk.h). Read it
-first. `include/karl/traces.h` is the flex PCB's copper under the display
-(generated, `just traces-cpp`), for designing around it.
+first. `include/karl/traces.h` is the flex PCB's copper under the display, for
+designing around it. Using an AI coding assistant? Point it at
+[`AGENTS.md`](AGENTS.md).
+
+The SDK is for KARL only: see [LICENSE](LICENSE). Plugins you write are yours.
 
 ## How it works
 
 - A plugin is a shared library exporting `karl_plugin()`, which returns a
   `karl::sdk::Plugin`: a name, a version, and the control types it adds.
-- KARL opens every library in `plugins/` (next to `controls.json`, so
-  `~/karl-app/plugins/` on the unit) at startup. Updates keep that folder.
+- KARL loads every plugin installed on it at startup. Install them from the
+  KARL Configurator (below); KARL updates keep them.
 - `controls.json` uses it like a built-in plugin:
   ```json
   "plugins": ["fleet-game"],
@@ -46,31 +49,45 @@ skips a library built for another ABI.
 
 ## Build
 
-The plugin must be built with the same compiler and OSG as KARL. For the unit,
-use the app's cross toolchain and sysroot:
+Plugins are built in a Docker image that holds the compiler and libraries KARL
+itself uses, so a plugin always matches the KARL it runs on. It works the same
+on macOS, Windows and Linux.
 
 ```bash
-cd software/sdk/examples/fleet-game
-cmake -B build-rpi5 -DCMAKE_TOOLCHAIN_FILE=../../../app/toolchain-rpi5.cmake \
-      -DCMAKE_MAKE_PROGRAM=/usr/bin/make
-cmake --build build-rpi5
-scp build-rpi5/fleet-game.so <user>@karl.local:karl-app/plugins/
+cd examples/pocket-seq
+docker run --rm -v "$PWD":/src ghcr.io/velours-io/karl-sdk:abi1
+# -> dist/pocket-seq.so
 ```
 
-`CMAKE_MAKE_PROGRAM` keeps CMake from picking the sysroot's own (aarch64)
-`gmake`. `RPI5_SYSROOT` must be set, as for `scripts/build-rpi5.sh`.
+`karl-build clean` as the command starts from scratch, and `bash` gives a
+shell in the image. Your own project is a `CMakeLists.txt` that includes
+`$KARL_SDK/cmake/KarlPlugin.cmake` and calls
+`karl_plugin(<name> <sources...>)`; copy one of the examples to start.
 
-Restart the app to load it. On macOS the same project builds `fleet-game.dylib`
-for the simulator: put it in `software/app/plugins/`.
+The image tag is the ABI: `abi1` builds plugins for every KARL with
+`KARL_SDK_ABI` 1.
 
-`cmake/KarlPlugin.cmake` gives `karl_plugin(<name> <sources...>)` for your own
-project.
+## Install
+
+In the KARL Configurator, with KARL connected over USB: Plugins, On this KARL,
+Install plugin, pick the `.so`. KARL checks it (a KARL plugin, the right ABI)
+before it goes in, then Restart KARL loads it. Add the plugin's name to
+`plugins` in your project and its control types to a page, as above.
+
+The same screen lists what is installed, why a plugin was refused, and removes
+plugins. A plugin keeps its `dataDir()` when it is removed.
+
+If KARL stops within 10 seconds of starting with plugins on, the next start
+skips them all and the configurator says so: remove the plugin at fault, then
+restart. Its controls are left out of the pages until then; the rest loads.
 
 ## Rules
 
 - Everything runs on KARL's UI thread. Keep `frame` short.
 - A crash in a plugin takes KARL down with it. Libraries are never unloaded.
 - Plugins run with the app's rights. Install only what you trust.
+- `tick`, `clock` and the Live transport events need KARL 0.1.78 or later
+  (`KARL_SDK_VERSION` 1.1). An older KARL loads the plugin and never calls them.
 
 ## Examples
 

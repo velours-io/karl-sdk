@@ -1,9 +1,7 @@
 # karl_plugin(<name> <sources...>)
 #
-# Builds <name>.so (.dylib on macOS, .dll on Windows) for KARL's plugins/
-# folder. For the unit, configure with the app's toolchain:
-#   cmake -B build-rpi5 -DCMAKE_TOOLCHAIN_FILE=<karl>/software/app/toolchain-rpi5.cmake
-# so the plugin is built with the same compiler and OSG as KARL itself.
+# Builds <name>.so for KARL. Run in the build image (README, Build), which
+# sets the compiler and libraries KARL itself uses.
 
 set(KARL_SDK_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/../include)
 

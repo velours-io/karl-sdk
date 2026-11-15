@@ -1,0 +1,29 @@
+#!/bin/sh
+# Builds the CMake project in /src for KARL and copies the plugin libraries to
+# /src/dist. `karl-build clean` starts from scratch. Anything else is run as a
+# command, for a shell: `docker run --rm -it -v "$PWD":/src karl-sdk bash`.
+set -e
+
+if [ $# -gt 0 ] && [ "$1" != "clean" ]; then
+  exec "$@"
+fi
+if [ ! -f /src/CMakeLists.txt ]; then
+  echo "karl-build: no CMakeLists.txt in the mounted folder (-v \"\$PWD\":/src)" >&2
+  exit 1
+fi
+[ "$1" = "clean" ] && rm -rf /src/build-karl
+
+cmake -S /src -B /src/build-karl -G Ninja \
+  -DCMAKE_TOOLCHAIN_FILE=/opt/karl-sdk/cmake/toolchain-karl.cmake \
+  -DCMAKE_BUILD_TYPE=Release
+cmake --build /src/build-karl
+
+mkdir -p /src/dist
+found=0
+for library in /src/build-karl/*.so; do
+  [ -f "$library" ] || continue
+  cp "$library" /src/dist/
+  echo "built: dist/$(basename "$library")"
+  found=1
+done
+[ "$found" = 1 ] || { echo "karl-build: no .so produced (karl_plugin() in CMakeLists.txt?)" >&2; exit 1; }

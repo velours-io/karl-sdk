@@ -1,0 +1,36 @@
+KARL SDK License
+
+Copyright (c) 2026 Velours Devices. All rights reserved.
+
+This license covers the KARL SDK: the header files, CMake files, build image
+scripts, documentation and example plugins in this repository (the "SDK").
+
+1. Permission. You may use, copy and modify the SDK, free of charge, for the
+   sole purpose of developing, building, testing and distributing software
+   that runs on KARL controllers made by Velours Devices ("Plugins").
+
+2. Your plugins. Plugins you write are yours. You may license, sell or give
+   them away on the terms you choose. Code taken from the example plugins may
+   be used in your Plugins under this license.
+
+3. Limits. You may not use the SDK, or any part of it, to develop software for
+   any other hardware or product, to build a device or application that
+   emulates or replaces KARL, or to recreate KARL's own application. You may
+   not sell or license the SDK itself.
+
+4. Redistribution. You may share the SDK, modified or not, only with this
+   license and copyright notice attached, and only for the purpose in
+   section 1.
+
+5. Third-party software. The build image contains open source software under
+   its own licenses, listed in THIRD_PARTY.md. This license does not change
+   those terms.
+
+6. No warranty. THE SDK IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+   EXPRESS OR IMPLIED, INCLUDING MERCHANTABILITY, FITNESS FOR A PARTICULAR
+   PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL VELOURS DEVICES BE LIABLE FOR
+   ANY CLAIM, DAMAGES OR OTHER LIABILITY ARISING FROM THE SDK OR ITS USE,
+   INCLUDING DAMAGE TO A KARL CAUSED BY A PLUGIN.
+
+7. Termination. This license ends automatically if you break its terms. Plugins
+   already distributed in line with it stay licensed by you as you chose.
