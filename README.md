@@ -32,10 +32,16 @@ The SDK is for KARL only: see [LICENSE](LICENSE). Plugins you write are yours.
   `LIVE_TRANSPORT` in `sdk.h`. Needs the `ableton` plugin active.
 - `dataDir()` is a folder of the plugin's own that survives restarts and
   updates.
-- `"x"`, `"y"`, `"width"`, `"height"` on the control give the surface part of
-  the display; by default it has all of it. The rest of the page works as
-  usual. An RTT camera of your own under a partial surface inherits its
-  scissor: set your own on it.
+- Where a control goes: `"link"` (its top left knob) and `"span"`
+  (`[columns, rows]` of knobs) give the surface those knobs' squares; without
+  them it has the whole display (`"x"`, `"y"`, `"width"`, `"height"` in pixels
+  also work). The rest of the page works as usual. An RTT camera of your own
+  under a partial surface inherits its scissor: set your own on it.
+- Its keys: `"keys": {"play": ["BUTTON_BOTTOM", 0], ...}`, one per role, and
+  `karl::sdk::configKey(host, "play")` gives the key's index. A big key
+  (`claimKey(..., 2)`) reports either of its slots on that index.
+- A manifest (below) lets the KARL Configurator place all of this for the
+  user: they pick the control and click where it goes.
 - Keys and knobs are free: `claimKey` / `claimEncoder` take any of them at any
   time, and KARL's own control there goes quiet until `releaseKey` /
   `releaseEncoder` or the end of the surface. `Input` always carries all of
@@ -81,27 +87,64 @@ If KARL stops within 10 seconds of starting with plugins on, the next start
 skips them all and the configurator says so: remove the plugin at fault, then
 restart. Its controls are left out of the pages until then; the rest loads.
 
+## Manifest
+
+`Plugin::manifest`, optional, is a JSON string that describes each control
+type for the configurator. With one, a control is added from Add control and
+placed on the grid, and its options get a form; without one, it is written by
+hand in the JSON tab.
+
+```json
+{
+  "label": "Pocket Seq",
+  "description": "A 16 step sequencer on four knobs and two keys.",
+  "category": "midi",
+  "controls": [{
+    "type": "PocketSeq",
+    "name": "Pocket Seq",
+    "description": "Step, pitch, velocity and octave on four knobs.",
+    "footprint": {"knobs": [2, 2]},
+    "keys": [{"role": "play", "label": "PLAY / STOP", "size": 2}],
+    "reserved": [],
+    "fields": [
+      {"name": "bpm", "label": "Tempo", "type": "number", "default": 120, "min": 20, "max": 300, "group": "Clock"}
+    ]
+  }]
+}
+```
+
+- `category`: `live`, `midi`, `mixer`, `show` or `tools`.
+- `footprint`: `{"knobs": [columns, rows]}` for a block the user places, or
+  `{"page": true}` for the whole page.
+- `keys`: the roles the configurator assigns, near the block, as `"keys"` in
+  the control. `size` 2 is a big key.
+- `reserved`: slots the control always takes itself, as `[edge, slot]`, for a
+  whole-page control that lays out keys of its own (see fleet-game).
+- `fields`: options, `number`, `select` (with `options`), `toggle` or `text`,
+  written into the control under their `name` with their `default`.
+
 ## Rules
 
 - Everything runs on KARL's UI thread. Keep `frame` short.
 - A crash in a plugin takes KARL down with it. Libraries are never unloaded.
 - Plugins run with the app's rights. Install only what you trust.
 - `tick`, `clock` and the Live transport events need KARL 0.1.78 or later
-  (`KARL_SDK_VERSION` 1.1). An older KARL loads the plugin and never calls them.
+  (`KARL_SDK_VERSION` 1.1); `configKey`, the manifest and placing by knob need
+  0.1.79 (1.2). An older KARL loads the plugin and ignores what it lacks.
 
 ## Examples
 
 [`examples/pocket-seq/`](examples/pocket-seq/): a 16-step sequencer on part
 of a page, the rest of the page staying normal KARL controls. Give it a 2x2
-block of knobs with `x`, `y`, `width`, `height` (bottom left:
-`75.25, 22, 376.5, 378`); it finds the four knobs under it. Top left picks the
+block of knobs (`"link"` and `"span": [2, 2]`, which the configurator writes
+when you place it); it finds the four knobs under it. Top left picks the
 step, top right its pitch (past B goes to the next octave), bottom left its
 velocity, bottom right its octave; turning one of the last three turns the
 step on and, while stopped, plays it. The steps are a 4x4 grid in the gap
 between the knobs, coloured by pitch and lit by velocity, the playhead
-flashing as it passes. Two big keys (`"keys": {"edge", "play", "step"}`):
+flashing as it passes. Two big keys (`"keys": {"play": [...], "step": [...]}`):
 PLAY / STOP, flashing on the beat, and the selected step on / off (ALT: a
-random pentatonic pattern, hold: clear). `"midi": {"port", "channel"}`.
+random pentatonic pattern, hold: clear). `"midiPort"`, `"midiChannel"`.
 
 `"sync"` picks what drives it, and ALT + PLAY cycles through them, shown
 along the top:

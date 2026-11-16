@@ -38,9 +38,6 @@ namespace pocket
         float bpm = 120;
         int port = 0;
         int channel = 1;
-        karl::sdk::Edge keysEdge = karl::sdk::Edge::BOTTOM;
-        int playSlot = 0;
-        int stepSlot = 2;
     };
 
     // One knob read through its absolute angle: turning adds up ticks, and

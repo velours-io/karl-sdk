@@ -4,28 +4,16 @@
 #include <nlohmann/json.hpp>
 
 #include <cstring>
-#include <map>
 
 namespace
 {
-    using karl::sdk::Edge;
-
-    Edge edgeOf(const std::string &name, Edge fallback)
-    {
-        static const std::map<std::string, Edge> EDGES = {
-            {"BUTTON_LEFT", Edge::LEFT}, {"BUTTON_RIGHT", Edge::RIGHT},
-            {"BUTTON_TOP", Edge::TOP}, {"BUTTON_BOTTOM", Edge::BOTTOM}};
-        const auto it = EDGES.find(name);
-        return it == EDGES.end() ? fallback : it->second;
-    }
-
-    // controls.json, all optional:
+    // controls.json, all optional (the configurator writes them from the
+    // manifest below):
     //   "id": "pocket-seq"  (names the saved pattern),
     //   "sync": "internal" | "midi" | "live"  (ALT + PLAY cycles; the last one
     //     used is saved with the pattern and wins over this),
-    //   "bpm": 120  (internal),
-    //   "midi": {"port": 0, "channel": 1},
-    //   "keys": {"edge": "BUTTON_BOTTOM", "play": 0, "step": 2}  (big keys: even slots)
+    //   "bpm": 120  (internal), "midiPort": 0, "midiChannel": 1,
+    //   "link" + "span": the 2x2 knobs, "keys": {"play": [...], "step": [...]}.
     pocket::Config readConfig(const char *text)
     {
         pocket::Config config;
@@ -38,18 +26,8 @@ namespace
         const std::string sync = json.value("sync", std::string("internal"));
         config.sync = sync == "midi" ? pocket::Sync::MIDI : sync == "live" ? pocket::Sync::LIVE : pocket::Sync::INTERNAL;
         config.bpm = json.value("bpm", config.bpm);
-        if (json.contains("midi") && json["midi"].is_object())
-        {
-            config.port = json["midi"].value("port", config.port);
-            config.channel = json["midi"].value("channel", config.channel);
-        }
-        if (json.contains("keys") && json["keys"].is_object())
-        {
-            const auto &keys = json["keys"];
-            config.keysEdge = edgeOf(keys.value("edge", std::string()), config.keysEdge);
-            config.playSlot = keys.value("play", config.playSlot);
-            config.stepSlot = keys.value("step", config.stepSlot);
-        }
+        config.port = json.value("midiPort", config.port);
+        config.channel = json.value("midiChannel", config.channel);
         return config;
     }
 
@@ -105,13 +83,38 @@ namespace
 
     const char *const TYPES[] = {"PocketSeq", nullptr};
 
+    // What the configurator offers and how it places it: a 2x2 block of knobs
+    // and two big keys, plus the options below. README, Manifest.
+    const char *const MANIFEST = R"json({
+  "label": "Pocket Seq",
+  "description": "A 16 step sequencer on four knobs and two keys, next to the rest of the page.",
+  "category": "midi",
+  "controls": [{
+    "type": "PocketSeq",
+    "name": "Pocket Seq",
+    "description": "Step, pitch, velocity and octave on a 2x2 block of knobs; PLAY and STEP on two big keys.",
+    "footprint": {"knobs": [2, 2]},
+    "keys": [
+      {"role": "play", "label": "PLAY / STOP", "size": 2},
+      {"role": "step", "label": "STEP ON / OFF", "size": 2}
+    ],
+    "fields": [
+      {"name": "sync", "label": "Sync", "type": "select", "options": ["internal", "midi", "live"], "default": "internal", "group": "Clock"},
+      {"name": "bpm", "label": "Tempo (BPM, internal)", "type": "number", "default": 120, "min": 20, "max": 300, "group": "Clock"},
+      {"name": "midiPort", "label": "Port", "type": "number", "default": 0, "min": 0, "max": 1, "group": "MIDI"},
+      {"name": "midiChannel", "label": "Channel (1-16)", "type": "number", "default": 1, "min": 1, "max": 16, "group": "MIDI"}
+    ]
+  }]
+})json";
+
     const karl::sdk::Plugin PLUGIN{
         sizeof(karl::sdk::Plugin),
         KARL_SDK_ABI,
         "pocket-seq",
-        "1.0.0",
+        "1.1.0",
         TYPES,
         &surface,
+        MANIFEST,
     };
 }
 

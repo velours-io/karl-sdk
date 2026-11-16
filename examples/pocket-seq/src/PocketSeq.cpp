@@ -189,8 +189,18 @@ PocketSeq::PocketSeq(const karl::sdk::Host *host, osg::Group *root, const Config
     }
     _ready = true;
 
-    _playKey = host->keyIndex(host, config.keysEdge, config.playSlot);
-    _stepKey = host->keyIndex(host, config.keysEdge, config.stepSlot);
+    // "keys": {"play": [...], "step": [...]}, as the configurator places
+    // them; the first two big keys of the bottom row otherwise.
+    _playKey = karl::sdk::configKey(host, "play");
+    _stepKey = karl::sdk::configKey(host, "step");
+    if (_playKey < 0)
+    {
+        _playKey = host->keyIndex(host, karl::sdk::Edge::BOTTOM, 0);
+    }
+    if (_stepKey < 0)
+    {
+        _stepKey = host->keyIndex(host, karl::sdk::Edge::BOTTOM, 2);
+    }
     host->claimKey(host, _playKey, 2);
     host->claimKey(host, _stepKey, 2);
 
@@ -446,10 +456,8 @@ void PocketSeq::preview()
 
 void PocketSeq::handleKeys(const Input &input)
 {
-    const int playSecond = _host->keyIndex(_host, _config.keysEdge, _config.playSlot + 1);
-    const int stepSecond = _host->keyIndex(_host, _config.keysEdge, _config.stepSlot + 1);
-
-    if (pushed(input, _playKey) || pushed(input, playSecond))
+    // Big keys: KARL reports either slot on the first.
+    if (pushed(input, _playKey))
     {
         if (input.alt)
         {
@@ -463,8 +471,8 @@ void PocketSeq::handleKeys(const Input &input)
 
     auto state = [&](int key)
     { return key >= 0 ? input.key[key] : KeyState::IDLE; };
-    const KeyState a = state(_stepKey), b = state(stepSecond);
-    if (a == KeyState::PUSHED || b == KeyState::PUSHED)
+    const KeyState step = state(_stepKey);
+    if (step == KeyState::PUSHED)
     {
         if (input.alt)
         {
@@ -474,12 +482,12 @@ void PocketSeq::handleKeys(const Input &input)
         _stepHeld = true;
         _stepLong = false;
     }
-    if (_stepHeld && (a == KeyState::LONG_PUSHED || b == KeyState::LONG_PUSHED))
+    if (_stepHeld && step == KeyState::LONG_PUSHED)
     {
         clear();
         _stepLong = true;
     }
-    if (_stepHeld && (a == KeyState::RELEASED || b == KeyState::RELEASED))
+    if (_stepHeld && step == KeyState::RELEASED)
     {
         if (!_stepLong)
         {

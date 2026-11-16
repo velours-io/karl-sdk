@@ -33,6 +33,9 @@ that KARL loads at startup and draws with OpenSceneGraph (OpenGL, GLSL 1.20).
 - `dataDir()` for files; write to a temporary file and rename.
 - Big keys (`claimKey(host, key, 2)`) start on even slots.
 - Text: `host->makeText` for KARL's look, held in an `osg::ref_ptr`.
+- Give the plugin a manifest (README, Manifest): footprint, key roles and
+  options, so users place it from the configurator. Read keys with
+  `karl::sdk::configKey(host, "<role>")`, options from the control's JSON.
 - Export `karl_plugin()` with `KARL_PLUGIN_EXPORT`, return a static
   `karl::sdk::Plugin` with `size = sizeof(...)` and `abi = KARL_SDK_ABI`.
   Zero-initialise tables you fill field by field.

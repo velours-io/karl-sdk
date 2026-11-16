@@ -13,6 +13,7 @@
 // only valid for the duration of the call.
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 
 namespace osg
@@ -26,9 +27,10 @@ namespace osgText
 
 #define KARL_SDK_ABI 1
 // This header's release. The minor number grows with what the tables gain
-// (1.1: Surface::tick and Surface::clock, Live transport events); a KARL
+// (1.1: Surface::tick and Surface::clock, Live transport events; 1.2:
+// Host::configKey, Plugin::manifest, surfaces placed by knob); a KARL
 // older than a field leaves it unused, which the size checks make safe.
-#define KARL_SDK_VERSION "1.1.0"
+#define KARL_SDK_VERSION "1.2.0"
 
 #if defined(_WIN32)
 #define KARL_PLUGIN_EXPORT extern "C" __declspec(dllexport)
@@ -116,9 +118,10 @@ namespace karl::sdk
         // KARL's own. Don't touch.
         void *context;
 
-        // The surface's size, from controls.json ("width" / "height"),
-        // the whole display by default. The root draws in 0..width, 0..height
-        // and nothing outside it shows.
+        // The surface's size: the knobs its control covers in controls.json
+        // ("link": top left knob, "span": [columns, rows]), or "x" / "y" /
+        // "width" / "height" in pixels, or the whole display by default. The
+        // root draws in 0..width, 0..height and nothing outside it shows.
         float width;
         float height;
 
@@ -134,7 +137,8 @@ namespace karl::sdk
         // the page has one, goes quiet and hidden until it is released, and
         // the key shows the plugin's label and color. `span` 2 makes a big
         // key over this slot and the next (start it on an even slot).
-        // Claims end with the surface.
+        // Claims end with the surface. A big key reports what either of its
+        // slots does on `key` in Input.
         void (*claimKey)(const Host *host, int key, int span);
         void (*releaseKey)(const Host *host, int key);
         // On a claimed key only. The color is also the key's LED.
@@ -169,6 +173,13 @@ namespace karl::sdk
         void (*log)(const Host *host, const char *message);
         // A folder that is the plugin's alone and survives restarts.
         const char *(*dataDir)(const Host *host);
+
+        // Added in 1.2 (KARL 0.1.79): call through karl::sdk::configKey below,
+        // which checks the field is there.
+        // The key a role names in the control's "keys" object, as the
+        // configurator writes it: "keys": {"play": ["BUTTON_BOTTOM", 0]}.
+        // -1 when the role is not there or names no key.
+        int (*configKey)(const Host *host, const char *role);
     };
 
     // One control type. KARL makes one instance per control of that type in
@@ -222,7 +233,21 @@ namespace karl::sdk
         // Control type names, null-terminated.
         const char *const *types;
         const Surface *(*surface)(const char *type);
+        // Added in 1.2 (KARL 0.1.79), may be null: what the configurator needs
+        // to offer the plugin's controls and place them on the grid, as JSON.
+        // See README, Manifest. Without one, controls are written by hand.
+        const char *manifest;
     };
+
+    // Host::configKey on a KARL that has it, else -1.
+    inline int configKey(const Host *host, const char *role)
+    {
+        if (host->size < offsetof(Host, configKey) + sizeof(host->configKey) || !host->configKey)
+        {
+            return -1;
+        }
+        return host->configKey(host, role);
+    }
 }
 
 // The one symbol KARL looks up. Its return value must stay valid forever.
