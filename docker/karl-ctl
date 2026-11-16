@@ -1,0 +1,77 @@
+#!/usr/bin/env python3
+"""Drives the running KARL simulator (karl-sim), for scripts and coding assistants:
+
+  docker exec karl-sim karl-ctl press BUTTON_BOTTOM 0      # and release, click
+  docker exec karl-sim karl-ctl turn 2 0 5                 # row, column, steps (+ clockwise)
+  docker exec karl-sim karl-ctl shot shot.png              # screenshot into the project folder
+  docker exec karl-sim karl-ctl alt-click BUTTON_BOTTOM 2  # with ALT held
+  docker exec karl-sim karl-ctl page pocket                # show a page
+  docker exec karl-sim karl-ctl log                        # KARL's log since it started
+"""
+import json
+import os
+import socket
+import sys
+import time
+
+PORT = 7070
+
+
+def probe(**message):
+    with socket.create_connection(("127.0.0.1", PORT), timeout=10) as sock:
+        stream = sock.makefile("rw")
+        message["id"] = 1
+        stream.write(json.dumps(message) + "\n")
+        stream.flush()
+        while True:
+            reply = json.loads(stream.readline())
+            if reply.get("id") == 1:
+                if not reply.get("ok", True):
+                    sys.exit(f"karl-ctl: {reply.get('error')}")
+                return reply.get("result")
+
+
+def link(edge: str, slot: str) -> list:
+    return [edge if edge.startswith("BUTTON_") else f"BUTTON_{edge.upper()}", int(slot)]
+
+
+def main(args: list[str]) -> None:
+    if not args:
+        sys.exit(__doc__)
+    command, rest = args[0], args[1:]
+    if command in ("press", "release", "click"):
+        probe(cmd=command, link=link(*rest))
+    elif command == "alt-click":
+        probe(cmd="press", link=["BUTTON_CORNER_TOP", 0])
+        time.sleep(0.3)
+        probe(cmd="click", link=link(*rest))
+        time.sleep(0.3)
+        probe(cmd="release", link=["BUTTON_CORNER_TOP", 0])
+    elif command == "turn":
+        row, col, steps = int(rest[0]), int(rest[1]), int(rest[2])
+        # Clockwise is a negative probe step; one step at a time, like a hand.
+        for _ in range(abs(steps)):
+            probe(cmd="turn", link=[f"ENCODER_ROW_{row}", col], steps=-1 if steps > 0 else 1)
+            time.sleep(0.03)
+    elif command == "shot":
+        path = os.path.abspath(os.path.join("/src", rest[0] if rest else "shot.png"))
+        if os.path.exists(path):
+            os.remove(path)
+        probe(cmd="screenshot", path=path)
+        for _ in range(50):
+            if os.path.exists(path):
+                time.sleep(0.2)
+                print(path)
+                return
+            time.sleep(0.1)
+        sys.exit("karl-ctl: no screenshot came")
+    elif command == "page":
+        probe(cmd="selectPage", pageId=rest[0])
+    elif command == "log":
+        print(open("/tmp/karl.log", errors="replace").read(), end="")
+    else:
+        sys.exit(__doc__)
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])

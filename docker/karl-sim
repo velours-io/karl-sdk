@@ -1,0 +1,69 @@
+#!/bin/bash
+# The KARL simulator on the plugin in /src, in a browser:
+#   docker run --rm -it --name karl-sim -p 6080:6080 -v "$PWD":/src ghcr.io/velours-io/karl-sdk:abi1 karl-sim
+# then http://localhost:6080. Builds the plugin first, and starts again with
+# the new library whenever dist/sim changes (run the usual build command in
+# another terminal). The page comes from /src/sim.json, a controls.json, or
+# is made from the plugin's manifest. Drive it from scripts with karl-ctl
+# (docker exec karl-sim karl-ctl ...).
+set -euo pipefail
+
+SIM=/tmp/karl-sim
+PROBE_PORT=7070
+WEB_PORT=6080
+
+karl-build
+
+rm -rf "$SIM" && mkdir -p "$SIM/plugins"
+cp -R /opt/karl-sim/fonts /opt/karl-sim/images "$SIM/"
+
+install_plugins() {
+  rm -f "$SIM"/plugins/*.so
+  cp /src/dist/sim/*.so "$SIM/plugins/"
+  if [ -f /src/sim.json ]; then
+    cp /src/sim.json "$SIM/controls.json"
+  else
+    karl-sim-config "$SIM"/plugins/*.so > "$SIM/controls.json"
+  fi
+}
+
+stamp() {
+  { stat -c %Y /src/dist/sim/*.so /src/sim.json 2>/dev/null || true; } | sort | tail -1
+}
+
+Xvfb :1 -screen 0 1280x800x24 -nolisten tcp > /tmp/xvfb.log 2>&1 &
+export DISPLAY=:1
+sleep 1
+x11vnc -display :1 -forever -shared -nopw -quiet -localhost > /tmp/x11vnc.log 2>&1 &
+websockify --web /usr/share/novnc "$WEB_PORT" localhost:5900 > /tmp/websockify.log 2>&1 &
+ln -sf /usr/share/novnc/vnc.html /usr/share/novnc/index.html 2>/dev/null || true
+
+echo
+echo "KARL simulator: http://localhost:$WEB_PORT/vnc.html?autoconnect=1&resize=scale"
+echo "Click keys, scroll or drag over knobs, shift = ALT. Ctrl-C to stop."
+echo
+
+cd "$SIM"
+trap 'kill 0' EXIT
+while true; do
+  install_plugins
+  last=$(stamp)
+  /opt/karl-sim/karl --sim -w /tmp/karl-none --probe "$PROBE_PORT" --width 1280 --height 800 --no-cursor --traces-clear \
+    > /tmp/karl.log 2>&1 &
+  karl=$!
+  sleep 3
+  grep -h "Plugins\]" /tmp/karl.log || true
+  while kill -0 "$karl" 2>/dev/null; do
+    sleep 1
+    if [ "$(stamp)" != "$last" ]; then
+      echo "dist/sim changed: restarting with the new library"
+      kill "$karl"; wait "$karl" 2>/dev/null || true
+      break
+    fi
+  done
+  if ! kill -0 "$karl" 2>/dev/null && [ "$(stamp)" = "$last" ]; then
+    echo "KARL stopped (see /tmp/karl.log in the container); starting again in 2 s"
+    tail -5 /tmp/karl.log
+    sleep 2
+  fi
+done

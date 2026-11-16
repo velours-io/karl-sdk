@@ -22,15 +22,21 @@ scripts, documentation and example plugins in this repository (the "SDK").
    license and copyright notice attached, and only for the purpose in
    section 1.
 
-5. Third-party software. The build image contains open source software under
+5. Simulator. The build image includes a compiled copy of KARL's application
+   (the "Simulator"). You may run it only to develop and test Plugins. You may
+   not copy it out of the image to use it otherwise, redistribute it apart
+   from the unmodified image, or reverse engineer, decompile or modify it,
+   except as far as applicable law allows despite this limit.
+
+6. Third-party software. The build image contains open source software under
    its own licenses, listed in THIRD_PARTY.md. This license does not change
    those terms.
 
-6. No warranty. THE SDK IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+7. No warranty. THE SDK IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
    EXPRESS OR IMPLIED, INCLUDING MERCHANTABILITY, FITNESS FOR A PARTICULAR
    PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL VELOURS DEVICES BE LIABLE FOR
    ANY CLAIM, DAMAGES OR OTHER LIABILITY ARISING FROM THE SDK OR ITS USE,
    INCLUDING DAMAGE TO A KARL CAUSED BY A PLUGIN.
 
-7. Termination. This license ends automatically if you break its terms. Plugins
+8. Termination. This license ends automatically if you break its terms. Plugins
    already distributed in line with it stay licensed by you as you chose.

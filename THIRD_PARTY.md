@@ -11,6 +11,12 @@ The SDK's own files are under [LICENSE](LICENSE). The build image
 | nlohmann/json 3.11 (headers) | MIT | https://github.com/nlohmann/json |
 | Mesa OpenGL headers | MIT | https://gitlab.freedesktop.org/mesa/mesa |
 | CMake, Ninja | BSD-3-Clause, Apache-2.0 | Debian source packages |
+| OpenSceneGraph 3.6 (Debian, for the simulator) | OpenSceneGraph Public License | Debian source packages |
+| Xvfb, x11vnc, Mesa (llvmpipe) | MIT / X11, GPL-2.0 (x11vnc) | Debian source packages |
+| noVNC, websockify | MPL-2.0, LGPL-3.0 | Debian source packages |
+| QuickJS (in the simulator) | MIT | https://bellard.org/quickjs |
+| RtMidi (in the simulator) | MIT-like (RtMidi license) | https://github.com/thestk/rtmidi |
+| Boost.Asio, json-schema-validator (in the simulator) | BSL-1.0, MIT | https://www.boost.org, https://github.com/pboettch/json-schema-validator |
 
 Plugins link to OpenSceneGraph dynamically, against the libraries on the KARL
 itself, which keeps the LGPL terms simple for plugin authors.

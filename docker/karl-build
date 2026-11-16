@@ -1,7 +1,7 @@
 #!/bin/sh
-# Builds the CMake project in /src for KARL and copies the plugin libraries to
-# /src/dist. `karl-build clean` starts from scratch. Anything else is run as a
-# command, for a shell: `docker run --rm -it -v "$PWD":/src karl-sdk bash`.
+# Builds the CMake project in /src twice: for KARL into /src/dist, and for the
+# simulator (karl-sim) into /src/dist/sim. `karl-build clean` starts from
+# scratch. Anything else is run as a command: `karl-sim`, `bash`, ...
 set -e
 
 if [ $# -gt 0 ] && [ "$1" != "clean" ]; then
@@ -11,19 +11,22 @@ if [ ! -f /src/CMakeLists.txt ]; then
   echo "karl-build: no CMakeLists.txt in the mounted folder (-v \"\$PWD\":/src)" >&2
   exit 1
 fi
-[ "$1" = "clean" ] && rm -rf /src/build-karl
+[ "$1" = "clean" ] && rm -rf /src/build-karl /src/build-sim
 
 cmake -S /src -B /src/build-karl -G Ninja \
   -DCMAKE_TOOLCHAIN_FILE=/opt/karl-sdk/cmake/toolchain-karl.cmake \
   -DCMAKE_BUILD_TYPE=Release
 cmake --build /src/build-karl
+cmake -S /src -B /src/build-sim -G Ninja -DCMAKE_BUILD_TYPE=Release > /dev/null
+cmake --build /src/build-sim
 
-mkdir -p /src/dist
+mkdir -p /src/dist/sim
 found=0
 for library in /src/build-karl/*.so; do
   [ -f "$library" ] || continue
   cp "$library" /src/dist/
-  echo "built: dist/$(basename "$library")"
+  cp "/src/build-sim/$(basename "$library")" /src/dist/sim/
+  echo "built: dist/$(basename "$library") (KARL), dist/sim/$(basename "$library") (simulator)"
   found=1
 done
 [ "$found" = 1 ] || { echo "karl-build: no .so produced (karl_plugin() in CMakeLists.txt?)" >&2; exit 1; }

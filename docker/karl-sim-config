@@ -1,0 +1,40 @@
+#!/usr/bin/env python3
+"""A controls.json for the simulator from the plugins' manifests: one page
+per control type, placed as the configurator would place it (a knob block at
+the bottom left, its keys under it). Plugins without a manifest get a page
+with their first type over the whole display."""
+import json
+import subprocess
+import sys
+
+pages, plugins = [], []
+for library in sys.argv[1:]:
+    info = json.loads(subprocess.run(["karl-manifest", library], check=True, capture_output=True, text=True).stdout)
+    plugins.append(info["name"])
+    manifest = info["manifest"] or {"controls": [{"type": None, "name": info["name"]}]}
+    for index, control in enumerate(manifest.get("controls", [])):
+        entry = {"id": f"{info['name']}-{index}", "name": control.get("name", info["name"]),
+                 "type": control.get("type")}
+        for field in control.get("fields", []):
+            if "default" in field:
+                entry[field["name"]] = field["default"]
+        knobs = control.get("footprint", {}).get("knobs")
+        if knobs:
+            columns, rows = knobs
+            entry["link"] = [f"ENCODER_ROW_{4 - rows}", 0]
+            entry["span"] = [columns, rows]
+            slot, keys = 0, {}
+            for key in control.get("keys", []):
+                size = key.get("size", 1)
+                slot += slot % 2 if size == 2 else 0
+                keys[key["role"]] = ["BUTTON_BOTTOM", slot]
+                slot += size
+            entry["keys"] = keys
+        if entry["type"]:
+            pages.append({"id": f"{info['name']}-{index}", "name": entry["name"].upper()[:12], "type": "Page",
+                          "labels": [], "controls": [entry]})
+
+if not pages:
+    sys.exit("karl-sim-config: no plugin control to show")
+print(json.dumps({"id": "karl-sim", "name": "KARL simulator", "plugins": plugins,
+                  "defaultPage": pages[0]["id"], "pages": pages}, indent=2))

@@ -24,6 +24,12 @@ that KARL loads at startup and draws with OpenSceneGraph (OpenGL, GLSL 1.20).
   (0..host->width, 0..host->height, y up). Knob centres:
   `host->encoderCenter`. Design nothing under a knob's 48 px radius: the knob
   covers it.
+- The flex PCB's copper runs over the display and shows as thin dark lines
+  through the picture (`karl/traces.h` has every segment; the simulator draws
+  them in red). Going under them is allowed, but decide it: keep small text,
+  thin lines and fine detail off them, and when something must cross one, say
+  why in a comment. They can also be used on purpose, as fleet-game's sonar
+  grid does.
 - Claim the knobs and keys you use (`claimEncoder`, `claimKey`); read them all
   from `Input` every frame. Knobs give absolute angles (0..16383, -1 = none
   yet): turn deltas into steps yourself, wrap at half a turn, accumulate so
@@ -42,6 +48,18 @@ that KARL loads at startup and draws with OpenSceneGraph (OpenGL, GLSL 1.20).
 
 ## Build and check
 `docker run --rm -v "$PWD":/src ghcr.io/velours-io/karl-sdk:abi1` in the
-project folder builds `dist/<name>.so`. Compile errors show there. There is no
-simulator: install it on a KARL from the KARL Configurator (README, Install)
-and try it.
+project folder builds `dist/<name>.so` (and `dist/sim/` for the simulator).
+Compile errors show there.
+
+Then check it in the simulator, and look at it:
+1. Start it once, in the background:
+   `docker run -d --rm --name karl-sim -p 6080:6080 -v "$PWD":/src ghcr.io/velours-io/karl-sdk:abi1 karl-sim`
+2. After each change, run the build command again: the simulator reloads.
+3. Drive and look: `docker exec karl-sim karl-ctl click BUTTON_BOTTOM 0`,
+   `... karl-ctl turn 2 0 5`, `... karl-ctl shot shot.png`, then read
+   `shot.png`. `... karl-ctl log` shows crashes and your `host->log` lines.
+4. In the screenshot, red lines are the copper over the display and outlined
+   black discs the knobs: check nothing that must be read sits under a knob,
+   and that anything on a red line is there on purpose.
+
+Last, install it on a real KARL from the KARL Configurator (README, Install).

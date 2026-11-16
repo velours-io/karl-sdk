@@ -73,6 +73,37 @@ shell in the image. Your own project is a `CMakeLists.txt` that includes
 The image tag is the ABI: `abi1` builds plugins for every KARL with
 `KARL_SDK_ABI` 1.
 
+## Try it in the simulator
+
+The same image runs KARL's app on your computer, with the plugin loaded, in a
+browser tab:
+
+```bash
+docker run --rm -it --name karl-sim -p 6080:6080 -v "$PWD":/src ghcr.io/velours-io/karl-sdk:abi1 karl-sim
+# -> http://localhost:6080/vnc.html?autoconnect=1&resize=scale
+```
+
+- Click keys, scroll or drag over knobs (up turns clockwise), hold shift for
+  ALT.
+- The flex PCB's copper is drawn in red and the knobs as outlined black discs:
+  what the panel hides or crosses on a real KARL (Designing for the panel).
+- The page comes from `sim.json` in your folder (a `controls.json`), or is
+  made from the plugin's manifest: a knob block at the bottom left, its keys
+  under it.
+- Run the build command again in another terminal and the simulator starts
+  again with the new library.
+- From a script, or a coding assistant, while it runs:
+  ```bash
+  docker exec karl-sim karl-ctl click BUTTON_BOTTOM 0   # press, release, alt-click
+  docker exec karl-sim karl-ctl turn 2 0 5              # row, column, steps (+ clockwise)
+  docker exec karl-sim karl-ctl shot shot.png           # into your folder
+  docker exec karl-sim karl-ctl log                     # KARL's log, plugin messages included
+  ```
+
+It renders in software, so it is slower than KARL and has no knob feel, LED
+colours, MIDI ports, Live or configurator. Check a plugin on a real KARL before
+you share it.
+
 ## Install
 
 In the KARL Configurator, with KARL connected over USB: Plugins, On this KARL,
@@ -122,6 +153,15 @@ hand in the JSON tab.
   whole-page control that lays out keys of its own (see fleet-game).
 - `fields`: options, `number`, `select` (with `options`), `toggle` or `text`,
   written into the control under their `name` with their `default`.
+
+## Designing for the panel
+
+- Knobs stand on the glass: a disc of 48 px radius around each knob centre
+  (`Host::encoderCenter`) is hidden. Put nothing there that has to be read.
+- The flex PCB's copper crosses the display as thin dark lines. Every segment
+  is in `include/karl/traces.h`, and the simulator draws them in red. Going
+  under them is fine when it is a choice: keep small text and fine detail off
+  them, or use them, as fleet-game does for its sonar grid.
 
 ## Rules
 
